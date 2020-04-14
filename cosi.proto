@@ -1,0 +1,288 @@
+syntax = "proto3";
+
+package cosi.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/container-object-store-interface/go-cosi";
+
+extend google.protobuf.MessageOptions {
+
+    // cosi_secret should be used to designate messages containing sensitive data
+    //             to provide protection against that data being logged or otherwise leaked.
+    bool cosi_secret = 1000;
+}
+
+message DriverInfoRequest {
+    // INTENTIONALLY BLANK
+}
+
+// DataProtocol defines a set of constants used in Create and Grant requests.
+enum DataProtocol {
+    PROTOCOL_UNSPECIFIED = 0;
+    AZURE_BLOB = 1;
+    GCS = 2;
+    S3 = 3;
+}
+
+// AccessMode defines a common set of permissions among object stores
+enum AccessMode {
+    MODE_UNSPECIFIED = 0;
+    RO = 1;
+    WO = 2;
+    RW = 3;
+}
+
+// S3SignatureVersion defines the 2 supported versions of S3's authentication
+enum S3SignatureVersion {
+    VERSION_UNSPECIFIED = 0;
+    V2 = 1;
+    V4 = 2;
+}
+
+message DriverInfoResponse {
+    // DriverName
+    string DriverName = 1;
+
+    // SupportedProtocols
+    repeated DataProtocol SupportedProtocols = 2;
+
+    // NextId = 3;
+}
+
+message CreateBucketRequest {
+    // RequestNameBucket
+    string RequestBucketName = 1;
+
+    // RequestProtocol
+    DataProtocol RequestProtocol = 2;
+
+    // DriverParameters
+    map<string, string> DriverParameters = 3;
+
+    AccessMode AccessMode = 4;
+
+    // NextId = 5;
+}
+
+message CreateBucketResponse {
+
+    message ProtocolAzureBlob {
+
+        string ContainerName = 1;
+
+        message AuthenticationData {
+            option (cosi_secret) = true;
+
+            string StorageAccountName = 1;
+            string AccountKey = 2;
+            string SasToken = 3;
+        }
+        AuthenticationData Authentication = 2;
+    }
+
+    message ProtocolGcs {
+
+        string BucketName = 1;
+        string ProjectId = 2;
+
+        message AuthenticationData {
+            option (cosi_secret) = true;
+
+            string ServiceAccountName = 1;
+            string PrivateKeyName = 2;
+            string PrivateKey = 3;
+        }
+        AuthenticationData Authentication = 3;
+    }
+
+    message ProtocolS3 {
+
+        string BucketName = 1;
+        string Region = 2;
+        string Endpoint = 3;
+
+        message AuthenticationData {
+            option (cosi_secret) = true;
+
+            string AccessKeyId = 1;
+            string SecretKey = 2;
+            string StsToken = 3;
+            string UserName = 4;
+
+            S3SignatureVersion SignatureVersion = 5;
+        }
+        AuthenticationData Authentication = 4;
+    }
+
+    // ProtocolResponse
+    oneof Protocol {
+        ProtocolAzureBlob AzureBlob = 1;
+        ProtocolGcs Gcs = 2;
+        ProtocolS3 S3 = 3;
+    }
+
+    // NextId = 4
+}
+
+message DeleteBucketRequest {
+    message ProtocolAzureBlob {
+        string ContainerName = 1;
+        string StorageAccountName = 2;
+    }
+
+    message ProtocolGcs {
+        string BucketName = 1;
+        string ProjectId = 2;
+        string PrivateKeyName = 3;
+        string ServiceAccountName = 4;
+    }
+
+    message ProtocolS3 {
+        string BucketName = 1;
+        string Region = 2;
+        string Endpoint = 3;
+        string AccessKeyId = 4;
+        string UserName = 5;
+        S3SignatureVersion SignatureVersion = 6;
+    }
+
+    enum BucketRetainPolicy {
+        RETAIN_POLICY_UNSPECIFIED = 0;
+        DELETE = 1;
+        RETAIN = 2;
+    }
+
+    BucketRetainPolicy RetainPolicy = 1;
+
+    map<string, string> DriverParameters = 2;
+
+    AccessMode AccessMode = 3;
+
+    oneof Protocol {
+        ProtocolAzureBlob AzureBlob = 4;
+        ProtocolGcs Gcs = 5;
+        ProtocolS3 S3 = 6;
+    }
+
+    // NextId = 7;
+}
+
+message DeleteBucketResponse {
+    // INTENTIONALLY BLANK
+}
+
+message GrantBucketAccessRequest {
+
+    message ProtocolAzureBlob {
+        string ContainerName = 1;
+        string StorageAccountName = 2;
+    }
+
+    message ProtocolGcs {
+        string BucketName = 1;
+        string ProjectId = 2;
+        string ServiceAccountName = 3;
+    }
+
+    message ProtocolS3 {
+        string BucketName = 1;
+        string Region = 2;
+        string Endpoint = 3;
+        string UserName = 5;
+        string AccessKeyId = 4; // probably too granular
+        S3SignatureVersion SignatureVersion = 6;
+    }
+
+    // DriverParameters
+    map<string, string> DriverParameters = 1;
+
+    AccessMode AccessMode = 2;
+
+    oneof Protocol {
+        ProtocolAzureBlob AzureBlob = 3;
+        ProtocolGcs Gcs = 4;
+        ProtocolS3 S3 = 5;
+    }
+
+    // NextId = 6;
+}
+
+message GrantBucketAccessResponse {
+    option (cosi_secret) = true;
+
+    message ProtocolAzureBlob {
+        string StorageAccountName = 1;
+        string AccountKey = 2;
+        string SasToken = 3;
+    }
+
+    message ProtocolGcs {
+        string ServiceAccountName = 1;
+        string PrivateKeyName = 2;
+        string PrivateKey = 3;
+    }
+
+    message ProtocolS3 {
+        string AccessKeyId = 1;
+        string SecretKey = 2;
+        string StsToken = 3;
+        string UserName = 4;
+        S3SignatureVersion SignatureVersion = 5;
+    }
+
+    oneof Protocol {
+        ProtocolAzureBlob AzureBlob = 1;
+        ProtocolGcs Gcs = 2;
+        ProtocolS3 S3 = 3;
+    }
+
+    // NextId = 4;
+}
+
+message RevokeBucketAccessRequest {
+    message ProtocolAzureBlob {
+        string ContainerName = 1;
+        string StorageAccountName = 2;
+    }
+
+    message ProtocolGcs {
+        string BucketName = 1;
+        string ProjectId = 2;
+        string PrivateKeyName = 3;
+        string ServiceAccountName = 4;
+    }
+
+    message ProtocolS3 {
+        string BucketName = 1;
+        string Region = 2;
+        string Endpoint = 3;
+        string AccessKeyId = 4;
+        string UserName = 5;
+        S3SignatureVersion SignatureVersion = 6;
+    }
+
+    map<string, string> DriverParameters = 1;
+
+    AccessMode AccessMode = 2;
+
+    oneof RequestProtocol {
+        ProtocolAzureBlob AzureBlob = 3;
+        ProtocolGcs Gcs = 4;
+        ProtocolS3 S3 = 5;
+    }
+}
+
+message RevokeBucketAccessResponse {
+    // INTENTIONALLY BLANK
+}
+
+service DynamicBucketHandler {
+    rpc CreateBucket (CreateBucketRequest) returns (CreateBucketResponse);
+    rpc DeleteBucket (DeleteBucketRequest) returns (DeleteBucketResponse);
+}
+
+service StaticBucketHandler {
+    rpc GrantBucketAccess (GrantBucketAccessRequest) returns (GrantBucketAccessResponse);
+    rpc RevokeBucketAccess (RevokeBucketAccessRequest) returns (RevokeBucketAccessResponse);
+}
